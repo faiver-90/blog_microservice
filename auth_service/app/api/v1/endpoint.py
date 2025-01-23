@@ -39,4 +39,3 @@ class UserRouter:
     async def login(user_data: LoginSchema,
                     controller: AuthController = Depends(get_auth_controller)):
         return await controller.login(user_data.username, user_data.password)
-
