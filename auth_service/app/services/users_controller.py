@@ -28,14 +28,18 @@ class AuthController:
     async def login(self,
                     username: str,
                     password: str):
-        user_data = await self.authenticate_user(username, password)
+        # user_data = await self.authenticate_user(username, password)
 
+        # data_for_token = {
+        #     "user_name": user_data['user_name'],
+        #     "user_id": user_data['user_id'],
+        #     # "role":  user.role,
+        #     "type": "access"}
         data_for_token = {
-            "user_name": user_data['user_name'],
-            "user_id": user_data['user_id'],
+            "user_name": 'faiver90',
+            "user_id": 56,
             # "role":  user.role,
             "type": "access"}
-
         access_token = await self.jwt_controller.create_access_token(data_for_token,
                                                                      expires_in=3600)
         data_for_token.update({"type": "refresh"})  # change type for refresh token

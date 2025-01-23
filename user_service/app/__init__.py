@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+from .api.v1.endpoint import UserRouter
 from .core.config import ConfigAPP
 from .db.connections import init_db
 
@@ -23,8 +24,8 @@ def create_app() -> FastAPI:
                   version=ConfigAPP.APP_VERSION,
                   openapi_tags=ConfigAPP.OPENAPI_TAGS
                   )
-
-    # register_routers(app)
+    user_router = UserRouter().router
+    app.include_router(user_router, prefix='/user')
 
     @app.get('/', tags=["Other"], description='Check health')
     async def health_check():
