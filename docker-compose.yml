@@ -29,6 +29,8 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=yourpassword
       - POSTGRES_DB=test
+    ports:
+      - "5432:5432" # Открываем порт для подключения извне
     networks:
       - backend
 
@@ -61,6 +63,8 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=yourpassword
       - POSTGRES_DB=test
+    ports:
+      - "5433:5433" # Открываем порт для подключения извне
     networks:
       - backend
 

@@ -16,8 +16,6 @@ class User(Base):
     __tablename__ = "user_account"
     id: Mapped[int] = mapped_column(primary_key=True)
     # id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    salt: Mapped[str] = mapped_column(String, nullable=False)
-    hashed_password: Mapped[str] = mapped_column(String, nullable=False)
     username: Mapped[str] = mapped_column(String(30), unique=True)
     fullname: Mapped[str] = mapped_column(nullable=True)
     email: Mapped[str] = mapped_column(unique=True)

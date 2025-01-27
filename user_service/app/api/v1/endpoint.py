@@ -2,8 +2,7 @@ from typing import List
 from fastapi import Depends, APIRouter
 
 from app.schemas.oauth2_scheme import oauth2_scheme
-from app.schemas.users_schemas import CreateUserSchema, UserResponseSchema, UpdateUserSchema, LoginSchema, \
-    RefreshTokenSchema
+from app.schemas.users_schemas import CreateUserSchema, UserResponseSchema, UpdateUserSchema
 from app.services.users_controller import UserController, get_user_controller
 
 router = APIRouter()

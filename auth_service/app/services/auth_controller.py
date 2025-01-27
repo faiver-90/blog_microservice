@@ -20,7 +20,7 @@ class AuthController:
     async def create_user_data(self, user_credentials):
         user_data = UserCredentials(
             salt=user_credentials.salt,
-            hashed_password=user_credentials.hashed_password,
+            hashed_password=user_credentials.password,
             user_id=user_credentials.user_id
         )
         self.session.add(user_data)

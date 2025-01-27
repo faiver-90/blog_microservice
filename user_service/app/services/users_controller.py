@@ -12,7 +12,7 @@ from app.db.session import get_session
 from app.utils.utilits import get_user_by_username, get_all_users, get_payload_from_token, exception_id, \
     exception_user_name
 
-from app.schemas.users_schemas import CreateUserSchema, UserResponseSchema, UserProfileSchema, UpdateUserSchema
+from app.schemas.users_schemas import CreateUserSchema, UserResponseSchema, UserProfileSchema
 
 
 class UserController:
@@ -141,8 +141,8 @@ async def main():
     await uses_service.add_user(
         {
             "salt": "string",
-            "hashed_password": "string",
-            "user_id": "1"
+            "password": "st$Rr7877ing",
+            "user_id": "2"
         }
     )
 
