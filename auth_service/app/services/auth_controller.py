@@ -1,11 +1,14 @@
+import asyncio
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from fastapi import HTTPException, Depends
+from fastapi import Depends
 
+from app.db.models import UserCredentials
 from app.db.session import get_session
+from app.schemas.users_schemas import UserCredentialsSchema
 from app.services.jwt_controller import JWTController, get_jwt_controller
 from app.services.password_controller import PasswordController
-from app.utils.utilits import get_user_data_by_username, exception_user_name
 
 
 class AuthController:
@@ -14,16 +17,27 @@ class AuthController:
         self.pass_controller = PasswordController()
         self.jwt_controller = jwt_controller
 
+    async def create_user_data(self, user_credentials):
+        user_data = UserCredentials(
+            salt=user_credentials.salt,
+            hashed_password=user_credentials.hashed_password,
+            user_id=user_credentials.user_id
+        )
+        self.session.add(user_data)
+        await self.session.commit()
+        return {'message': 'data was added'}
+
     async def authenticate_user(self, username: str, password: str):
         # Получение данных о пользователе из user_service
-        user_data = await self.get_user_data_by_username(username)
-
-        # Валидация пароля
-        is_valid = self.pass_controller.verify_password(password, user_data["hashed_password"], user_data["salt"])
-        if not is_valid:
-            raise HTTPException(status_code=401, detail="Invalid password")
-
-        return {"user_data": user_data}
+        # user_data = await self.get_user_data_by_username(username)
+        #
+        # # Валидация пароля
+        # is_valid = self.pass_controller.verify_password(password, user_data["hashed_password"], user_data["salt"])
+        # if not is_valid:
+        #     raise HTTPException(status_code=401, detail="Invalid password")
+        #
+        # return {"user_data": user_data}
+        print(username, password)
 
     async def login(self,
                     username: str,
@@ -51,3 +65,12 @@ class AuthController:
 def get_auth_controller(session: AsyncSession = Depends(get_session),
                         jwt_controller: JWTController = Depends(get_jwt_controller)):
     return AuthController(session=session, jwt_controller=jwt_controller)
+
+
+async def run():
+    auth = get_auth_controller()
+    await auth.authenticate_user('asda', 'jhkh')
+
+
+if __name__ == "__main__":
+    asyncio.run(run())

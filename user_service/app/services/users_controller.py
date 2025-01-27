@@ -1,10 +1,11 @@
+import asyncio
 from typing import List
 
+import httpx
 from sqlalchemy import delete, inspect
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from fastapi import HTTPException, Depends
-from sqlalchemy.exc import IntegrityError
 
 from app.db.models import User, UserProfile
 from app.db.session import get_session
@@ -49,32 +50,39 @@ class UserController:
 
     async def add_user(self, user_data: CreateUserSchema):
         try:
-            salt = self.pass_controller.generate_salt()
-            hashed_password = self.pass_controller.hash_password(user_data.password, salt)
-            user = User(
-                username=user_data.username,
-                fullname=user_data.full_name,
-                userprofile=UserProfile(work=user_data.work),
-                salt=salt,
-                hashed_password=hashed_password,
-                email=user_data.email
-            )
-            self.session.add(user)
-            await self.session.commit()
-            return {"message": "User added successfully"}
-        except IntegrityError as e:
-            await self.session.rollback()
-            error_message = str(e.orig)
+            async with httpx.AsyncClient() as client:
+                response = await client.post(f"http://auth_service:8000/auth/create_user_data/", json=user_data)
+                print(response.json())
+        except Exception:
+            raise
 
-            if "user_account_username_key" in error_message:
-                raise HTTPException(status_code=400,
-                                    detail="Username already exists. Please choose a different username.")
-            elif "user_account_email_key" in error_message:
-                raise HTTPException(status_code=400,
-                                    detail="Email already exists. Please use a different email address.")
-            else:
-                raise HTTPException(status_code=400,
-                                    detail="A database integrity error occurred. Please check your data.")
+            # salt = self.pass_controller.generate_salt()
+            # hashed_password = self.pass_controller.hash_password(user_data.password, salt)
+
+        #     user = User(
+        #         username=user_data.username,
+        #         fullname=user_data.full_name,
+        #         userprofile=UserProfile(work=user_data.work),
+        #         salt=salt,
+        #         hashed_password=hashed_password,
+        #         email=user_data.email
+        #     )
+        #     self.session.add(user)
+        #     await self.session.commit()
+        #     return {"message": "User added successfully"}
+        # except IntegrityError as e:
+        #     await self.session.rollback()
+        #     error_message = str(e.orig)
+        #
+        #     if "user_account_username_key" in error_message:
+        #         raise HTTPException(status_code=400,
+        #                             detail="Username already exists. Please choose a different username.")
+        #     elif "user_account_email_key" in error_message:
+        #         raise HTTPException(status_code=400,
+        #                             detail="Email already exists. Please use a different email address.")
+        #     else:
+        #         raise HTTPException(status_code=400,
+        #                             detail="A database integrity error occurred. Please check your data.")
 
     async def get_all_users(self) -> List[UserResponseSchema]:
         users = await get_all_users(self.session)
@@ -126,3 +134,18 @@ class UserController:
 
 def get_user_controller(session: AsyncSession = Depends(get_session)):
     return UserController(session=session)
+
+
+async def main():
+    uses_service = get_user_controller()
+    await uses_service.add_user(
+        {
+            "salt": "string",
+            "hashed_password": "string",
+            "user_id": "1"
+        }
+    )
+
+
+if __name__ == '__main__':
+    asyncio.run(main())
