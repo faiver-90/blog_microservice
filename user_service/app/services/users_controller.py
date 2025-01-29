@@ -49,6 +49,30 @@ class UserController:
 
         return {"message": "Updated"}
 
+    async def add_user(self, user_data: CreateUserSchema):
+        """Добавление пользователя с валидацией пароля"""
+        await self.validate_password(user_data.password)
+
+        user_id = None
+
+        try:
+            user_data_dict = await self.create_user(user_data)
+            user_id = int(user_data_dict['user_id'])
+        except Exception:
+            if user_id is not None:
+                user_check = await self.session.get(User, user_id)
+                if user_check:  # Проверяем, есть ли пользователь в БД
+                    query = delete(User).where(User.id == user_id)
+                    await self.session.execute(query)
+                    await self.session.commit()
+            raise
+
+        user_check = await self.session.get(User, user_id)
+        print(user_check)
+
+        await self.create_auth_record(user_id, user_data.password)
+        return {"message": "Пользователь создан"}
+
     async def validate_password(self, password: str):
         async with httpx.AsyncClient() as client:
             response = await client.post(f"http://auth_service:8000/auth/validate_password/",
@@ -57,8 +81,6 @@ class UserController:
                 raise HTTPException(status_code=400, detail=response.json().get("detail"))
 
     async def create_user(self, user_data: CreateUserSchema):
-        print(f"📥 Полученные данные: {user_data.dict()}")  # Логируем данные
-
         try:
             user = User(
                 username=user_data.username,
@@ -93,21 +115,6 @@ class UserController:
 
         except Exception as e:
             raise HTTPException(status_code=501, detail=f"Ошибка при отправке запроса: {e}")
-
-    async def add_user(self, user_data: CreateUserSchema):
-        """Добавление пользователя с валидацией пароля"""
-        await self.validate_password(user_data.password)
-        user_data_dict = await self.create_user(user_data)
-        user_id = int(user_data_dict['user_id'])
-        user_check = await self.session.get(User, user_id)
-        print(user_check)
-        await self.create_auth_record(user_id, user_data.password)
-
-        query = delete(User).where(User.id == user_id)
-        await self.session.execute(query)
-        await self.session.commit()
-
-        return {"message": "Пользователь создан"}
 
     async def get_all_users(self) -> List[UserResponseSchema]:
         users = await get_all_users(self.session)
