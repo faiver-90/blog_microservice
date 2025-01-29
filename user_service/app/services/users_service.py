@@ -10,6 +10,7 @@ from fastapi import HTTPException, Depends
 
 from app.db.models import User, UserProfile
 from app.db.session import get_session
+from app.repositories.user_repository import UserRepository
 from app.services.request_controler import RequestController
 from app.utils.utilits import get_user_by_username, get_all_users, get_payload_from_token, exception_id, \
     exception_user_name
@@ -21,35 +22,7 @@ class UserService:
     def __init__(self, session: AsyncSession):
         self.session = session
         self.request_controller = RequestController()
-
-    async def update_user(self,
-                          user_data,
-                          token: dict):
-        payload = await get_payload_from_token(token)
-        user_name = payload.get("user_name")
-        user = await get_user_by_username(user_name, self.session)
-
-        await exception_user_name(user_name)
-
-        user_attributes = {attr.key for attr in inspect(User).mapper.column_attrs}
-        profile_attributes = {attr.key for attr in inspect(UserProfile).mapper.column_attrs}
-
-        user_data_dict = user_data.dict(exclude_unset=True)  # Исключаем поля, которые не были переданы
-
-        for field, value in user_data_dict.items():
-            if field in user_attributes:  # Если поле относится к User
-                setattr(user, field, value)
-            elif field in profile_attributes:  # Если поле относится к UserProfile
-                if user.userprofile:
-                    setattr(user.userprofile, field, value)
-                else:
-                    # Создаём профиль, если его нет
-                    user.userprofile = UserProfile(**{field: value})
-
-        # Сохранение изменений
-        await self.session.commit()
-
-        return {"message": "Updated"}
+        self.repo = UserRepository(self.session)
 
     async def add_user(self, user_data: CreateUserSchema):
         """Добавление пользователя с валидацией пароля"""
@@ -116,6 +89,35 @@ class UserService:
                                                           {"user_id": user_id, "password": password})
         except Exception as e:
             raise HTTPException(status_code=501, detail=f"Ошибка при отправке запроса: {e}")
+
+    async def update_user(self,
+                          user_data,
+                          token: dict):
+        payload = await get_payload_from_token(token)
+        user_name = payload.get("user_name")
+        user = await get_user_by_username(user_name, self.session)
+
+        await exception_user_name(user_name)
+
+        user_attributes = {attr.key for attr in inspect(User).mapper.column_attrs}
+        profile_attributes = {attr.key for attr in inspect(UserProfile).mapper.column_attrs}
+
+        user_data_dict = user_data.dict(exclude_unset=True)  # Исключаем поля, которые не были переданы
+
+        for field, value in user_data_dict.items():
+            if field in user_attributes:  # Если поле относится к User
+                setattr(user, field, value)
+            elif field in profile_attributes:  # Если поле относится к UserProfile
+                if user.userprofile:
+                    setattr(user.userprofile, field, value)
+                else:
+                    # Создаём профиль, если его нет
+                    user.userprofile = UserProfile(**{field: value})
+
+        # Сохранение изменений
+        await self.session.commit()
+
+        return {"message": "Updated"}
 
     async def get_all_users(self) -> List[UserResponseSchema]:
         users = await get_all_users(self.session)
