@@ -6,12 +6,12 @@ class RequestController:
     """Базовый контроллер с универсальным обработчиком запросов."""
 
     @staticmethod
-    async def execute_request(method: str, url: str, json_data: dict = None):
+    async def execute_request(method: str, url: str, json_data: dict = None, headers: dict = None):
         """Универсальный метод для выполнения HTTP-запросов."""
         try:
             async with httpx.AsyncClient() as client:
-                response = await client.request(method, url, json=json_data)
-
+                response = await client.request(method, url, json=json_data, headers=headers)
+                print(response)
             if response.status_code not in {200, 201}:
                 error_detail = response.json().get("detail", "Unknown error")
                 raise HTTPException(status_code=response.status_code, detail=error_detail)

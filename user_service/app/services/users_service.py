@@ -86,33 +86,35 @@ class UserService:
                                                                 token)
         # payload = await get_payload_from_token(token)
         print(payload)
-        # user = await get_user_by_username(payload.get('user_name'), self.session)
-        # await exception_id(payload.get('user_id'))
-        # await exception_user_name(payload.get('user_name'))
-        # user_schema = UserResponseSchema(
-        #     username=user.username,
-        #     key=user.key,
-        #     profile=UserProfileSchema.model_validate(user.userprofile) if user.userprofile else None
-        # )
-        #
-        # return user_schema
+        user = await get_user_by_username(payload.get('user_name'), self.session)
+        await exception_id(payload.get('user_id'))
+        await exception_user_name(payload.get('user_name'))
+        user_schema = UserResponseSchema(
+            username=user.username,
+            key=user.key,
+            profile=UserProfileSchema.model_validate(user.userprofile) if user.userprofile else None
+        )
+
+        return user_schema
 
     async def delete_user(self,
-                          token: dict):
+                          token):
+        headers = {"Authorization": f"Bearer {token}"}
+        payload = await self.request_controller.execute_request('POST',
+                                                                "http://auth_service:8000/auth/decode_jwt_token/",
+                                                                headers=headers)
+        print(payload)
+        # payload = await get_payload_from_token(token)
+        проверку на наличие
 
-        payload = await get_payload_from_token(token)
-        user_id = payload.get('user_id')
-
-        await exception_id(payload.get('user_id'))
-
-        user_name = payload.get('user_name')
-
-        await exception_user_name(user_name)
-
-        query = delete(User).where(User.id == user_id)
-        await self.session.execute(query)
-        await self.session.commit()
-        return {"message": f"Deleted user: {user_name}"}
+        try:
+            user_id = payload.get('user_id')
+            query = delete(User).where(User.id == user_id)
+            await self.session.execute(query)
+            await self.session.commit()
+            return {"message": f"Deleted user: {user_id}"}
+        except Exception as e:
+            raise HTTPException(detail=e, status_code=400)
 
 
 def get_user_service(session: AsyncSession = Depends(get_session)):

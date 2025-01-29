@@ -69,4 +69,5 @@ class UserRouter:
     @staticmethod
     async def delete_user(token: str = Depends(oauth2_scheme),
                           controller: UserService = Depends(get_user_service)):
+        print(token)
         return await controller.delete_user(token)

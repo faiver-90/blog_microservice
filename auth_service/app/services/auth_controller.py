@@ -81,8 +81,8 @@ class AuthController:
         #     # "role":  user.role,
         #     "type": "access"}
         data_for_token = {
-            "user_name": 'faiver90',
-            "user_id": 56,
+            "user_name": 'faiver9023',
+            "user_id": 97,
             # "role":  user.role,
             "type": "access"}
         access_token = await self.jwt_controller.create_access_token(data_for_token,

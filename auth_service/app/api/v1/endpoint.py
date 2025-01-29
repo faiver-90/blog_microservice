@@ -1,5 +1,6 @@
 from fastapi import Depends, APIRouter, HTTPException
 
+from app.schemas.oauth2_scheme import oauth2_scheme
 from app.schemas.users_schemas import LoginSchema, RefreshTokenSchema, PasswordValidationSchema, UserCredentialsSchema, \
     TokenSchema
 from app.services.jwt_controller import JWTController, get_jwt_controller
@@ -44,17 +45,18 @@ class UserRouter:
         )
 
         self.router.add_api_route(
-            "/check_jwt_token/",
-            self.check_jwt_token,
+            "/decode_jwt_token/",
+            self.decode_jwt_token,
             methods=["POST"],
             tags=["Auth"]
         )
 
     @staticmethod
-    async def check_jwt_token(token: TokenSchema,
-                              auth_controller: AuthController = Depends(get_auth_controller)):
+    async def decode_jwt_token(token: str = Depends(oauth2_scheme),
+                               auth_controller: AuthController = Depends(get_auth_controller)):
         try:
-            return await auth_controller.check_jwt_token(token.access_token)
+            print('start decode')
+            return await auth_controller.check_jwt_token(token)
         except ValueError as e:
             raise HTTPException(status_code=400, detail=str(e))
 
