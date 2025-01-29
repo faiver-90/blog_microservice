@@ -14,13 +14,6 @@ class UserRouter:
         self.router = APIRouter()
 
         self.router.add_api_route(
-            "/add_user/",
-            self.add_user,
-            methods=["POST"],
-            status_code=201,
-            tags=["Users"]
-        )
-        self.router.add_api_route(
             "/get_users/",
             self.get_all_users,
             methods=["GET"],
@@ -46,17 +39,17 @@ class UserRouter:
             tags=["Users"])
 
         self.router.add_api_route(
-            "/alternative_user_add/",
-            self.alternative_user_add,
+            "/add_user/",
+            self.add_user,
             methods=["POST"],
             tags=["Users"])
 
     @staticmethod
-    async def alternative_user_add(user_data: CreateUserSchema,
-                                   controller: UserController = Depends(get_user_controller)):
-        return await controller.add_user_alt(user_data.username,
-                                             user_data.email,
-                                             user_data.password)
+    async def add_user(user_data: CreateUserSchema,
+                       controller: UserController = Depends(get_user_controller)):
+        return await controller.add_user(user_data.username,
+                                         user_data.email,
+                                         user_data.password)
 
     @staticmethod
     async def get_current_user(token: str = Depends(oauth2_scheme),
@@ -70,12 +63,7 @@ class UserRouter:
         return await controller.update_user(user_data, token)
 
     @staticmethod
-    async def add_user(user_data: CreateUserSchema,
-                       controller: UserService = Depends(get_user_service)):
-        return await controller.add_user(user_data.username, user_data.email, user_data.password)
-
-    @staticmethod
-    async def get_all_users(controller: UserService = Depends(get_user_service)):
+    async def get_all_users(controller: UserController = Depends(get_user_controller)):
         return await controller.get_all_users()
 
     @staticmethod

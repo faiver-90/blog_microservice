@@ -27,19 +27,11 @@ class UserService:
     async def add_user(self, username, email, password):
         """Добавление пользователя с валидацией пароля"""
         await self.validate_password(password)
-
-        user_id = None
-
-        try:
-            user_data = await self.repo.create_user(username, email)
-            user_id = int(user_data.id)
-        except Exception:
-            await self.repo.delete_user(user_id)
-            raise
-
+        user_data = await self.repo.create_user(username, email)
+        user_id = int(user_data.id)
         await self.create_auth_record(user_id, password)
-        await self.repo.delete_user(user_id)
-        return {"message": "Пользователь создан"}
+
+        return {"message": "User created"}
 
     async def validate_password(self, password: str):
         await self.request_controller.execute_request('POST',
@@ -53,6 +45,10 @@ class UserService:
                                                           {"user_id": user_id, "password": password})
         except Exception as e:
             raise HTTPException(status_code=501, detail=f"Ошибка при отправке запроса: {e}")
+
+    async def get_all_users(self) -> List[UserResponseSchema]:
+        users = await self.repo.get_all_users()
+        return [UserResponseSchema.model_validate(user) for user in users]
 
     async def update_user(self,
                           user_data,
@@ -82,22 +78,6 @@ class UserService:
         await self.session.commit()
 
         return {"message": "Updated"}
-
-    async def get_all_users(self) -> List[UserResponseSchema]:
-        users = await get_all_users(self.session)
-        if not users:
-            raise HTTPException(status_code=404, detail="User not found")
-
-        # Преобразование в схемы
-        return [
-            UserResponseSchema(
-                username=user.username,
-                full_name=user.fullname,
-                key=user.key,
-                profile=UserProfileSchema.model_validate(user.userprofile) if user.userprofile else None
-            )
-            for user in users
-        ]
 
     async def get_current_user_by_token(self,
                                         token: dict) -> UserResponseSchema:

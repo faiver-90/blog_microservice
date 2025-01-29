@@ -47,11 +47,18 @@ class UserRepository:
             raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
 
     async def get_all_users(self) -> List[User]:
-        """Get all user from DB"""
+        """Get all users from DB"""
         try:
             stmt = select(User).options(selectinload(User.userprofile))
             result = await self.session.execute(stmt)
-            return result.scalars().all()
+
+            # Сохраняем результат в переменную, чтобы избежать двойного вызова
+            users = result.scalars().all()
+
+            if not users:  # Проверяем список сразу
+                raise HTTPException(status_code=404, detail="Users not found")
+
+            return users
         except Exception as e:
             await self.session.rollback()
             raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
