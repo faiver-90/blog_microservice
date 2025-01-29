@@ -1,12 +1,13 @@
 from typing import List
 
-from fastapi import HTTPException
+from fastapi import HTTPException, Depends
 from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.db.models import User
+from app.db.session import get_session
 
 
 class UserRepository:
@@ -56,7 +57,6 @@ class UserRepository:
 
             if not users:  # Проверяем список сразу
                 raise HTTPException(status_code=404, detail="Users not found")
-
             return users
         except Exception as e:
             await self.session.rollback()
@@ -81,3 +81,7 @@ class UserRepository:
         except Exception as e:
             await self.session.rollback()
             raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+
+
+def get_repo(session: AsyncSession = Depends(get_session)):
+    return UserRepository(session)

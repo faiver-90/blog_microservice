@@ -2,6 +2,7 @@ from typing import List
 from fastapi import Depends, APIRouter, HTTPException
 
 from app.api.controllers.user_controllers import get_user_controller, UserController
+from app.repositories.user_repository import UserRepository, get_repo
 from app.schemas.oauth2_scheme import oauth2_scheme
 from app.schemas.users_schemas import CreateUserSchema, UserResponseSchema, UpdateUserSchema
 from app.services.users_service import UserService, get_user_service
@@ -43,6 +44,18 @@ class UserRouter:
             self.add_user,
             methods=["POST"],
             tags=["Users"])
+
+        self.router.add_api_route(
+            "/get_user_by_username/",
+            self.get_user_by_username,
+            methods=["POST"],
+            tags=["Users"])
+
+    @staticmethod
+    async def get_user_by_username(user_name: str,
+                                   controller: UserRepository = Depends(get_repo)):
+        result = await controller.get_user_by_username(user_name)
+        # return result.
 
     @staticmethod
     async def add_user(user_data: CreateUserSchema,

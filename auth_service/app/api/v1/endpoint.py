@@ -1,7 +1,7 @@
 from fastapi import Depends, APIRouter, HTTPException
 
 from app.schemas.oauth2_scheme import oauth2_scheme
-from app.schemas.users_schemas import LoginSchema, RefreshTokenSchema, PasswordValidationSchema, UserCredentialsSchema, \
+from app.schemas.auth_schemas import LoginSchema, RefreshTokenSchema, PasswordValidationSchema, UserCredentialsSchema, \
     TokenSchema
 from app.services.jwt_controller import JWTController, get_jwt_controller
 from app.services.auth_controller import get_auth_controller, AuthController

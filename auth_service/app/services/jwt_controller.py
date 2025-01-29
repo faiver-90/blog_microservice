@@ -4,7 +4,7 @@ import jwt
 from dotenv import load_dotenv
 from fastapi import HTTPException
 
-from app.schemas.users_schemas import RefreshTokenSchema
+from app.schemas.auth_schemas import RefreshTokenSchema
 
 load_dotenv()
 
