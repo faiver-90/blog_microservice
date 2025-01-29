@@ -12,10 +12,8 @@ class RefreshTokenSchema(BaseModel):
     refresh_token: str
 
 
-class UserCredentialsSchema(BaseModel):
-    salt: str
+class PasswordValidationSchema(BaseModel):
     password: str
-    user_id: int
 
     model_config = {
         "from_attributes": True
@@ -34,3 +32,7 @@ class UserCredentialsSchema(BaseModel):
         if not any(char in "!@#$%^&*()-_+=~`[]{}|\\:;\"'<>,.?/" for char in value):
             raise ValueError("Password must contain at least one special character")
         return value
+
+
+class UserCredentialsSchema(PasswordValidationSchema):
+    user_id: int

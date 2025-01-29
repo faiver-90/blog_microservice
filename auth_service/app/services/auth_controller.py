@@ -1,12 +1,13 @@
 import asyncio
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from fastapi import Depends
+from fastapi import Depends, HTTPException
 
 from app.db.models import UserCredentials
 from app.db.session import get_session
-from app.schemas.users_schemas import UserCredentialsSchema
+from app.schemas.users_schemas import PasswordValidationSchema
 from app.services.jwt_controller import JWTController, get_jwt_controller
 from app.services.password_controller import PasswordController
 
@@ -17,15 +18,33 @@ class AuthController:
         self.pass_controller = PasswordController()
         self.jwt_controller = jwt_controller
 
+    async def validate_password(self, payload: PasswordValidationSchema):
+        try:
+            return {"message": "Пароль прошел проверку"}
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+
     async def create_user_data(self, user_credentials):
-        user_data = UserCredentials(
-            salt=user_credentials.salt,
-            hashed_password=user_credentials.password,
-            user_id=user_credentials.user_id
-        )
-        self.session.add(user_data)
-        await self.session.commit()
-        return {'message': 'data was added'}
+        try:
+            salt = self.pass_controller.generate_salt()
+            hashed_password = self.pass_controller.hash_password(user_credentials.password, salt)
+
+            user_data = UserCredentials(
+                salt=str(salt),
+                hashed_password=hashed_password,
+                user_id=user_credentials.user_id
+            )
+            self.session.add(user_data)
+            await self.session.commit()
+            return {'message': 'complete'}
+
+        except IntegrityError:
+            await self.session.rollback()
+            raise HTTPException(status_code=400, detail="User ID already exists")
+
+        except Exception as e:
+            await self.session.rollback()
+            raise HTTPException(status_code=500, detail=f"Server error: {str(e)}")
 
     async def authenticate_user(self, username: str, password: str):
         # Получение данных о пользователе из user_service
@@ -66,11 +85,9 @@ def get_auth_controller(session: AsyncSession = Depends(get_session),
                         jwt_controller: JWTController = Depends(get_jwt_controller)):
     return AuthController(session=session, jwt_controller=jwt_controller)
 
-
-async def run():
-    auth = get_auth_controller()
-    await auth.authenticate_user('asda', 'jhkh')
-
-
-if __name__ == "__main__":
-    asyncio.run(run())
+    # async def run():
+    #     auth = get_auth_controller()
+    #     await auth.authenticate_user('asda', 'jhkh')
+    #
+    # if __name__ == "__main__":
+    #     asyncio.run(run())

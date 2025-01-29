@@ -3,6 +3,7 @@ from typing import List
 
 import httpx
 from sqlalchemy import delete, inspect
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from fastapi import HTTPException, Depends
@@ -48,41 +49,65 @@ class UserController:
 
         return {"message": "Updated"}
 
-    async def add_user(self, user_data: CreateUserSchema):
+    async def validate_password(self, password: str):
+        async with httpx.AsyncClient() as client:
+            response = await client.post(f"http://auth_service:8000/auth/validate_password/",
+                                         json={"password": password})
+            if response.status_code != 200:
+                raise HTTPException(status_code=400, detail=response.json().get("detail"))
+
+    async def create_user(self, user_data: CreateUserSchema):
+        print(f"📥 Полученные данные: {user_data.dict()}")  # Логируем данные
+
+        try:
+            user = User(
+                username=user_data.username,
+                fullname=user_data.full_name,
+                userprofile=UserProfile(work=user_data.work),
+                email=user_data.email
+            )
+            self.session.add(user)
+            await self.session.commit()
+            return {"message": "User added successfully", 'user_id': user.id}
+        except IntegrityError as e:
+            await self.session.rollback()
+            error_message = str(e.orig)
+            if "user_account_username_key" in error_message:
+                raise HTTPException(status_code=400,
+                                    detail="Username already exists. Please choose a different username.")
+            elif "user_account_email_key" in error_message:
+                raise HTTPException(status_code=400,
+                                    detail="Email already exists. Please use a different email address.")
+            else:
+                raise HTTPException(status_code=400,
+                                    detail="A database integrity error occurred. Please check your data.")
+
+    async def create_auth_record(self, user_id: int, password: str):
         try:
             async with httpx.AsyncClient() as client:
-                response = await client.post(f"http://auth_service:8000/auth/create_user_data/", json=user_data)
-                print(response.json())
-        except Exception:
-            raise
+                response = await client.post(
+                    "http://auth_service:8000/auth/create_user_data/",
+                    json={"user_id": user_id, "password": password}
+                )
+                print('response.status_code', response.status_code)
 
-            # salt = self.pass_controller.generate_salt()
-            # hashed_password = self.pass_controller.hash_password(user_data.password, salt)
+        except Exception as e:
+            raise HTTPException(status_code=501, detail=f"Ошибка при отправке запроса: {e}")
 
-        #     user = User(
-        #         username=user_data.username,
-        #         fullname=user_data.full_name,
-        #         userprofile=UserProfile(work=user_data.work),
-        #         salt=salt,
-        #         hashed_password=hashed_password,
-        #         email=user_data.email
-        #     )
-        #     self.session.add(user)
-        #     await self.session.commit()
-        #     return {"message": "User added successfully"}
-        # except IntegrityError as e:
-        #     await self.session.rollback()
-        #     error_message = str(e.orig)
-        #
-        #     if "user_account_username_key" in error_message:
-        #         raise HTTPException(status_code=400,
-        #                             detail="Username already exists. Please choose a different username.")
-        #     elif "user_account_email_key" in error_message:
-        #         raise HTTPException(status_code=400,
-        #                             detail="Email already exists. Please use a different email address.")
-        #     else:
-        #         raise HTTPException(status_code=400,
-        #                             detail="A database integrity error occurred. Please check your data.")
+    async def add_user(self, user_data: CreateUserSchema):
+        """Добавление пользователя с валидацией пароля"""
+        await self.validate_password(user_data.password)
+        user_data_dict = await self.create_user(user_data)
+        user_id = int(user_data_dict['user_id'])
+        user_check = await self.session.get(User, user_id)
+        print(user_check)
+        await self.create_auth_record(user_id, user_data.password)
+
+        query = delete(User).where(User.id == user_id)
+        await self.session.execute(query)
+        await self.session.commit()
+
+        return {"message": "Пользователь создан"}
 
     async def get_all_users(self) -> List[UserResponseSchema]:
         users = await get_all_users(self.session)
