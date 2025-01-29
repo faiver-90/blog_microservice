@@ -81,21 +81,25 @@ class UserService:
 
     async def get_current_user_by_token(self,
                                         token: dict) -> UserResponseSchema:
-        payload = await get_payload_from_token(token)
-
-        user = await get_user_by_username(payload.get('user_name'), self.session)
-        await exception_id(payload.get('user_id'))
-        await exception_user_name(payload.get('user_name'))
-        user_schema = UserResponseSchema(
-            username=user.username,
-            key=user.key,
-            profile=UserProfileSchema.model_validate(user.userprofile) if user.userprofile else None
-        )
-
-        return user_schema
+        payload = await self.request_controller.execute_request('POST',
+                                                                "http://auth_service:8000/auth/check_jwt_token/",
+                                                                token)
+        # payload = await get_payload_from_token(token)
+        print(payload)
+        # user = await get_user_by_username(payload.get('user_name'), self.session)
+        # await exception_id(payload.get('user_id'))
+        # await exception_user_name(payload.get('user_name'))
+        # user_schema = UserResponseSchema(
+        #     username=user.username,
+        #     key=user.key,
+        #     profile=UserProfileSchema.model_validate(user.userprofile) if user.userprofile else None
+        # )
+        #
+        # return user_schema
 
     async def delete_user(self,
                           token: dict):
+
         payload = await get_payload_from_token(token)
         user_id = payload.get('user_id')
 

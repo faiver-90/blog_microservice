@@ -1,6 +1,7 @@
 from fastapi import Depends, APIRouter, HTTPException
 
-from app.schemas.users_schemas import LoginSchema, RefreshTokenSchema, PasswordValidationSchema, UserCredentialsSchema
+from app.schemas.users_schemas import LoginSchema, RefreshTokenSchema, PasswordValidationSchema, UserCredentialsSchema, \
+    TokenSchema
 from app.services.jwt_controller import JWTController, get_jwt_controller
 from app.services.auth_controller import get_auth_controller, AuthController
 
@@ -41,6 +42,21 @@ class UserRouter:
             methods=["POST"],
             tags=["Auth"]
         )
+
+        self.router.add_api_route(
+            "/check_jwt_token/",
+            self.check_jwt_token,
+            methods=["POST"],
+            tags=["Auth"]
+        )
+
+    @staticmethod
+    async def check_jwt_token(token: TokenSchema,
+                              auth_controller: AuthController = Depends(get_auth_controller)):
+        try:
+            return await auth_controller.check_jwt_token(token.access_token)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
 
     @staticmethod
     async def validate_password(user_credentials: PasswordValidationSchema):

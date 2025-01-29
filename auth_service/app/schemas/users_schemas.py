@@ -12,6 +12,10 @@ class RefreshTokenSchema(BaseModel):
     refresh_token: str
 
 
+class TokenSchema(BaseModel):
+    access_token: str
+
+
 class PasswordValidationSchema(BaseModel):
     password: str
 

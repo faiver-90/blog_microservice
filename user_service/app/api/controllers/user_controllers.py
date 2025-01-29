@@ -26,5 +26,5 @@ class UserController:
             raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
 
 
-def get_user_controller(session: AsyncSession = Depends(get_session)):
+def get_user_controller(session: AsyncSession = Depends(get_session)) -> UserController:
     return UserController(session)

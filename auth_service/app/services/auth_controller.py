@@ -1,5 +1,6 @@
 import asyncio
 
+import jwt
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -7,8 +8,8 @@ from fastapi import Depends, HTTPException
 
 from app.db.models import UserCredentials
 from app.db.session import get_session
-from app.schemas.users_schemas import PasswordValidationSchema
-from app.services.jwt_controller import JWTController, get_jwt_controller
+from app.schemas.users_schemas import PasswordValidationSchema, RefreshTokenSchema, TokenSchema
+from app.services.jwt_controller import JWTController, get_jwt_controller, JWT_SECRET_KEY, JWT_ALGORITHM
 from app.services.password_controller import PasswordController
 
 
@@ -17,6 +18,17 @@ class AuthController:
         self.session = session
         self.pass_controller = PasswordController()
         self.jwt_controller = jwt_controller
+
+    async def check_jwt_token(self, token):
+        try:
+            payload = await self.jwt_controller.decode_access_token(token)
+            if payload.get("type") != "access":
+                raise HTTPException(status_code=403, detail="Invalid token type")
+            return payload
+        except jwt.ExpiredSignatureError:
+            raise HTTPException(status_code=401, detail="Token has expired")
+        except jwt.InvalidTokenError:
+            raise HTTPException(status_code=401, detail="Invalid token")
 
     async def validate_password(self, payload: PasswordValidationSchema):
         try:
