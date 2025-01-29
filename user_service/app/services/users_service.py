@@ -17,7 +17,7 @@ from app.utils.utilits import get_user_by_username, get_all_users, get_payload_f
 from app.schemas.users_schemas import CreateUserSchema, UserResponseSchema, UserProfileSchema
 
 
-class UserController:
+class UserService:
     def __init__(self, session: AsyncSession):
         self.session = session
         self.request_controller = RequestController()
@@ -166,7 +166,7 @@ class UserController:
 
 
 def get_user_controller(session: AsyncSession = Depends(get_session)):
-    return UserController(session=session)
+    return UserService(session=session)
 
 
 async def main():
