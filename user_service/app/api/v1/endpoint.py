@@ -1,5 +1,5 @@
 from typing import List
-from fastapi import Depends, APIRouter
+from fastapi import Depends, APIRouter, HTTPException
 
 from app.api.controllers.user_controllers import get_user_controller, UserController
 from app.schemas.oauth2_scheme import oauth2_scheme
@@ -69,5 +69,7 @@ class UserRouter:
     @staticmethod
     async def delete_user(token: str = Depends(oauth2_scheme),
                           controller: UserService = Depends(get_user_service)):
-        print(token)
-        return await controller.delete_user(token)
+        try:
+            return await controller.delete_user(token)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))

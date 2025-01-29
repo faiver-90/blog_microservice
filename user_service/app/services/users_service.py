@@ -1,9 +1,6 @@
-import asyncio
 from typing import List
 
-import httpx
 from sqlalchemy import delete, inspect
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from fastapi import HTTPException, Depends
@@ -12,10 +9,10 @@ from app.db.models import User, UserProfile
 from app.db.session import get_session
 from app.repositories.user_repository import UserRepository
 from app.services.request_controler import RequestController
-from app.utils.utilits import get_user_by_username, get_all_users, get_payload_from_token, exception_id, \
+from app.utils.utilits import get_user_by_username, get_payload_from_token, exception_id, \
     exception_user_name
 
-from app.schemas.users_schemas import CreateUserSchema, UserResponseSchema, UserProfileSchema
+from app.schemas.users_schemas import UserResponseSchema, UserProfileSchema
 
 
 class UserService:
@@ -103,18 +100,15 @@ class UserService:
         payload = await self.request_controller.execute_request('POST',
                                                                 "http://auth_service:8000/auth/decode_jwt_token/",
                                                                 headers=headers)
-        print(payload)
-        # payload = await get_payload_from_token(token)
-        проверку на наличие
 
-        try:
-            user_id = payload.get('user_id')
-            query = delete(User).where(User.id == user_id)
-            await self.session.execute(query)
-            await self.session.commit()
-            return {"message": f"Deleted user: {user_id}"}
-        except Exception as e:
-            raise HTTPException(detail=e, status_code=400)
+        user_id = payload.get('user_id')
+        user = await self.repo.get_user_by_id(user_id)
+        if user is None:
+            raise ValueError(f"User with ID {user_id} not found")
+        query = delete(User).where(User.id == user_id)
+        await self.session.execute(query)
+        await self.session.commit()
+        return {"message": f"Deleted user: {user_id}"}
 
 
 def get_user_service(session: AsyncSession = Depends(get_session)):

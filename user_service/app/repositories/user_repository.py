@@ -35,7 +35,6 @@ class UserRepository:
             await self.session.rollback()
             raise HTTPException(status_code=500, detail=f"Ошибка при создании пользователя: {str(e)}")
 
-
     async def delete_user(self, user_id: int):
         """Delete user"""
         try:
@@ -67,6 +66,16 @@ class UserRepository:
         """Get one user from DB by username"""
         try:
             stmt = select(User).options(selectinload(User.userprofile)).where(User.username == username)
+            result = await self.session.execute(stmt)
+            return result.scalar_one_or_none()
+        except Exception as e:
+            await self.session.rollback()
+            raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+
+    async def get_user_by_id(self, user_id: str) -> User:
+        """Get one user from DB by id"""
+        try:
+            stmt = select(User).options(selectinload(User.userprofile)).where(User.id == user_id)
             result = await self.session.execute(stmt)
             return result.scalar_one_or_none()
         except Exception as e:
