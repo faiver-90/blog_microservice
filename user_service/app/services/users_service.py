@@ -24,63 +24,27 @@ class UserService:
         self.request_controller = RequestController()
         self.repo = UserRepository(self.session)
 
-    async def add_user(self, user_data: CreateUserSchema):
+    async def add_user(self, username, email, password):
         """Добавление пользователя с валидацией пароля"""
-        await self.validate_password(user_data.password)
+        await self.validate_password(password)
 
         user_id = None
 
         try:
-            user_data_dict = await self.create_user(user_data)
-            user_id = int(user_data_dict['user_id'])
+            user_data = await self.repo.create_user(username, email)
+            user_id = int(user_data.id)
         except Exception:
-            if user_id is not None:
-                user_check = await self.session.get(User, user_id)
-                if user_check:  # Проверяем, есть ли пользователь в БД
-                    query = delete(User).where(User.id == user_id)
-                    await self.session.execute(query)
-                    await self.session.commit()
+            await self.repo.delete_user(user_id)
             raise
 
-        user_check = await self.session.get(User, user_id)
-        print(user_check)
-
-        await self.create_auth_record(user_id, user_data.password)
+        await self.create_auth_record(user_id, password)
+        await self.repo.delete_user(user_id)
         return {"message": "Пользователь создан"}
 
     async def validate_password(self, password: str):
         await self.request_controller.execute_request('POST',
                                                       "http://auth_service:8000/auth/validate_password/",
                                                       {"password": password})
-        # async with httpx.AsyncClient() as client:
-        #     response = await client.post("http://auth_service:8000/auth/validate_password/",
-        #                                  json={"password": password})
-        #     if response.status_code != 200:
-        #         raise HTTPException(status_code=400, detail=response.json().get("detail"))
-
-    async def create_user(self, user_data: CreateUserSchema):
-        try:
-            user = User(
-                username=user_data.username,
-                fullname=user_data.full_name,
-                userprofile=UserProfile(work=user_data.work),
-                email=user_data.email
-            )
-            self.session.add(user)
-            await self.session.commit()
-            return {"message": "User added successfully", 'user_id': user.id}
-        except IntegrityError as e:
-            await self.session.rollback()
-            error_message = str(e.orig)
-            if "user_account_username_key" in error_message:
-                raise HTTPException(status_code=400,
-                                    detail="Username already exists. Please choose a different username.")
-            elif "user_account_email_key" in error_message:
-                raise HTTPException(status_code=400,
-                                    detail="Email already exists. Please use a different email address.")
-            else:
-                raise HTTPException(status_code=400,
-                                    detail="A database integrity error occurred. Please check your data.")
 
     async def create_auth_record(self, user_id: int, password: str):
         try:
@@ -167,20 +131,19 @@ class UserService:
         return {"message": f"Deleted user: {user_name}"}
 
 
-def get_user_controller(session: AsyncSession = Depends(get_session)):
+def get_user_service(session: AsyncSession = Depends(get_session)):
     return UserService(session=session)
 
+# async def main():
+#     uses_service = get_user_service()
+#     await uses_service.add_user(
+#         {
+#             "salt": "string",
+#             "password": "st$Rr7877ing",
+#             "user_id": "2"
+#         }
+#     )
 
-async def main():
-    uses_service = get_user_controller()
-    await uses_service.add_user(
-        {
-            "salt": "string",
-            "password": "st$Rr7877ing",
-            "user_id": "2"
-        }
-    )
-
-
-if __name__ == '__main__':
-    asyncio.run(main())
+#
+# if __name__ == '__main__':
+#     asyncio.run(main())

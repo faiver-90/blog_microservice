@@ -22,9 +22,19 @@ class UserRepository:
             self.session.add(user)
             await self.session.commit()
             return user
+        except IntegrityError as e:
+            await self.session.rollback()
+            error_message = str(e.orig)
+            if "user_account_username_key" in error_message:
+                raise HTTPException(status_code=400, detail="Пользователь с таким username уже существует")
+            elif "user_account_email_key" in error_message:
+                raise HTTPException(status_code=400, detail="Пользователь с таким email уже существует")
+            else:
+                raise HTTPException(status_code=400, detail="Ошибка уникальности данных")
         except Exception as e:
             await self.session.rollback()
-            raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Ошибка при создании пользователя: {str(e)}")
+
 
     async def delete_user(self, user_id: int):
         """Delete user"""
