@@ -10,6 +10,7 @@ from fastapi import HTTPException, Depends
 
 from app.db.models import User, UserProfile
 from app.db.session import get_session
+from app.services.request_controler import RequestController
 from app.utils.utilits import get_user_by_username, get_all_users, get_payload_from_token, exception_id, \
     exception_user_name
 
@@ -19,6 +20,7 @@ from app.schemas.users_schemas import CreateUserSchema, UserResponseSchema, User
 class UserController:
     def __init__(self, session: AsyncSession):
         self.session = session
+        self.request_controller = RequestController()
 
     async def update_user(self,
                           user_data,
@@ -74,11 +76,14 @@ class UserController:
         return {"message": "Пользователь создан"}
 
     async def validate_password(self, password: str):
-        async with httpx.AsyncClient() as client:
-            response = await client.post(f"http://auth_service:8000/auth/validate_password/",
-                                         json={"password": password})
-            if response.status_code != 200:
-                raise HTTPException(status_code=400, detail=response.json().get("detail"))
+        await self.request_controller.execute_request('POST',
+                                                      "http://auth_service:8000/auth/validate_password/",
+                                                      {"password": password})
+        # async with httpx.AsyncClient() as client:
+        #     response = await client.post("http://auth_service:8000/auth/validate_password/",
+        #                                  json={"password": password})
+        #     if response.status_code != 200:
+        #         raise HTTPException(status_code=400, detail=response.json().get("detail"))
 
     async def create_user(self, user_data: CreateUserSchema):
         try:
@@ -106,13 +111,9 @@ class UserController:
 
     async def create_auth_record(self, user_id: int, password: str):
         try:
-            async with httpx.AsyncClient() as client:
-                response = await client.post(
-                    "http://auth_service:8000/auth/create_user_data/",
-                    json={"user_id": user_id, "password": password}
-                )
-                print('response.status_code', response.status_code)
-
+            await self.request_controller.execute_request('POST',
+                                                          "http://auth_service:8000/auth/create_user_data/",
+                                                          {"user_id": user_id, "password": password})
         except Exception as e:
             raise HTTPException(status_code=501, detail=f"Ошибка при отправке запроса: {e}")
 
