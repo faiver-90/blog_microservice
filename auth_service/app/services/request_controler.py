@@ -6,22 +6,19 @@ class RequestController:
     """Базовый контроллер с универсальным обработчиком запросов."""
 
     @staticmethod
-    async def execute_request(method: str, url: str, json_data: dict = None, headers: dict = None):
-        """Универсальный метод для выполнения HTTP-запросов."""
+    async def execute_request(method: str, url: str, json_data=None, headers=None):
+        async with httpx.AsyncClient() as client:
+            response = await client.request(method, url, json=json_data, headers=headers)
+
+        if response.status_code == 200:
+            return response.json()  # Успешный ответ
+
         try:
-            async with httpx.AsyncClient() as client:
-                response = await client.request(method, url, json=json_data, headers=headers)
-                print(response)
-            if response.status_code not in {200, 201}:
-                error_detail = response.json().get("detail", "Unknown error")
-                raise HTTPException(status_code=response.status_code, detail=error_detail)
+            error_data = response.json()  # Парсим JSON-ошибку
+        except ValueError:  # Если тело ответа пустое или не JSON
+            error_data = {"detail": "Unknown error from external service"}
 
-            return response.json()
-
-        except httpx.RequestError as e:
-            raise HTTPException(status_code=500, detail=f"Ошибка сети: {str(e)}")
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Внутренняя ошибка сервера: {str(e)}")
+        raise HTTPException(status_code=response.status_code, detail=error_data.get("detail", "Unknown error"))
 
 
 def get_request_controller():

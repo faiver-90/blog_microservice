@@ -67,6 +67,8 @@ class UserRepository:
         try:
             stmt = select(User).options(selectinload(User.userprofile)).where(User.username == username)
             result = await self.session.execute(stmt)
+            if result:
+                HTTPException(status_code=400, detail='User not found')
             return result.scalar_one_or_none()
         except Exception as e:
             await self.session.rollback()

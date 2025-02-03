@@ -1,7 +1,7 @@
 from typing import List
-from fastapi import Depends, APIRouter, HTTPException
+from fastapi import Depends, APIRouter, HTTPException, Body
 
-from app.api.controllers.user_controllers import get_user_controller, UserController
+from app.controllers.user_controllers import get_user_controller, UserController
 from app.repositories.user_repository import UserRepository, get_repo
 from app.schemas.oauth2_scheme import oauth2_scheme
 from app.schemas.users_schemas import CreateUserSchema, UserResponseSchema, UpdateUserSchema
@@ -46,16 +46,22 @@ class UserRouter:
             tags=["Users"])
 
         self.router.add_api_route(
-            "/get_user_by_username/",
-            self.get_user_by_username,
-            methods=["POST"],
+            "/get_user_id_by_username/",
+            self.get_user_id_by_username,
+            methods=["GET"],
             tags=["Users"])
 
     @staticmethod
-    async def get_user_by_username(user_name: str,
-                                   controller: UserRepository = Depends(get_repo)):
-        result = await controller.get_user_by_username(user_name)
-        # return result.
+    async def get_user_id_by_username(user_name: dict = Body(),
+                                      controller: UserRepository = Depends(get_repo)):
+        result = await controller.get_user_by_username(user_name['user_name'])
+        try:
+            result.id
+        except Exception:
+            raise HTTPException(status_code=400, detail='User not found')
+
+        return {'user_id': result.id}
+
 
     @staticmethod
     async def add_user(user_data: CreateUserSchema,

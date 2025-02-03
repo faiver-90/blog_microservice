@@ -1,6 +1,7 @@
 import asyncio
 
 import jwt
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -20,6 +21,7 @@ class AuthController:
                  pass_controller: PasswordController,
                  request_controller: RequestController
                  ):
+        self.manual_session = get_session()
         self.session = session
         self.pass_controller = pass_controller
         self.jwt_controller = jwt_controller
@@ -65,18 +67,14 @@ class AuthController:
             raise HTTPException(status_code=500, detail=f"Server error: {str(e)}")
 
     async def login(self,
-                    username: str,
+                    user_name: str,
                     password: str):
-        user_data = await self.authenticate_user(username, password)
-
-        # data_for_token = {
-        #     "user_name": user_data['user_name'],
-        #     "user_id": user_data['user_id'],
-        #     # "role":  user.role,
-        #     "type": "access"}
+        user_id = await self.authenticate_user(user_name, password)
+        if not user_id:
+            HTTPException(status_code=400, detail='User not found')
         data_for_token = {
-            "user_name": 'faiver9023',
-            "user_id": 97,
+            "user_name": user_name,
+            "user_id": user_id,
             # "role":  user.role,
             "type": "access"}
         access_token = await self.jwt_controller.create_access_token(data_for_token,
@@ -86,27 +84,24 @@ class AuthController:
                                                                       expires_in=60 * 25)
         return {"access_token": access_token, "refresh_token": refresh_token}
 
-    async def authenticate_user(self, username: str,
+    async def authenticate_user(self,
+                                user_name: str,
                                 password: str):
 
         result = await self.request_controller.execute_request('GET',
-                                                               'http://uesr_service:8000/user/get_user_by_username/',
-                                                               {
-                                                                   'username': username,
-                                                                   'password': password
-                                                               }
+                                                               'http://user_service:8000/user/get_user_id_by_username/',
+                                                               json_data={
+                                                                   'user_name': user_name}
                                                                )
-        print(result)
-        # Получение данных о пользователе из user_service
-        # user_data = await self.get_user_data_by_username(username)
-        #
-        # # Валидация пароля
-        # is_valid = self.pass_controller.verify_password(password, user_data["hashed_password"], user_data["salt"])
-        # if not is_valid:
-        #     raise HTTPException(status_code=401, detail="Invalid password")
-        #
-        # return {"user_data": user_data}
-        print(username, password)
+        user_id = result['user_id']
+        stmt = select(UserCredentials).where(UserCredentials.user_id == user_id)
+        result = await self.session.execute(stmt)
+        user_data = result.scalar_one_or_none()
+        is_valid = self.pass_controller.verify_password(password, user_data.hashed_password)
+        if not is_valid:
+            raise HTTPException(status_code=401, detail="Invalid password")
+
+        return user_id
 
 
 def get_auth_controller(session: AsyncSession = Depends(get_session),
@@ -124,7 +119,7 @@ def get_auth_controller(session: AsyncSession = Depends(get_session),
 async def run():
     auth = get_auth_controller()
 
-    await auth.authenticate_user('asda', 'jhkh')
+    await auth.authenticate_user(user_name='faive34r9023', password='St3rong6_Pass')
 
 
 if __name__ == "__main__":
