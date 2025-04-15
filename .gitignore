@@ -2,3 +2,6 @@
 *.pyc
 __pycache__/
 .idea
+00_sh_create_one_service_structure/
+env.py
+write_compact_package_to_req.bash
